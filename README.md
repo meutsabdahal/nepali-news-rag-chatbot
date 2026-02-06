@@ -33,7 +33,7 @@ This project aims to build a **Retrieval-Augmented Generation (RAG)** system tha
 * **Knowledge Base:** `np20ng` Dataset (10k+ Nepali news articles).
 * **Embedding Model:** `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (supports Nepali & English).
 * **Vector Database:** **FAISS** (Local, fast, CPU-optimized).
-* **LLM (Reasoning):** **Llama-3.1-70B-Versatile** (via Groq API for sub-second latency).
+* **LLM (Reasoning):** **Llama-3.1-8B-Instruct**.
 * **Orchestrator:** **LangChain**.
 * **Frontend:** **Gradio** or **Streamlit**.
 
