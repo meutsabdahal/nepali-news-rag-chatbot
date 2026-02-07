@@ -3,6 +3,9 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# GGUF model weights (large binary files)
+models/
+
 # C extensions
 *.so
 

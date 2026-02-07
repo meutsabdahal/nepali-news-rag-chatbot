@@ -4,12 +4,12 @@
 **Goal:** A retrieval-augmented generation system capable of answering queries in English or Nepali based on a dataset of 10k+ Nepali news articles. <br>
 
 **Stack:**
-* **Environment:** Google Colab (Free Tier T4 GPU)
-* **LLM:** `meta-llama/Meta-Llama-3.1-8B-Instruct` (4-bit Quantized via `bitsandbytes`)
+* **Environment:** Local CPU (8 GB RAM, no GPU)
+* **LLM:** `TinyLlama-1.1B-Chat-v1.0` (Q8_0 GGUF via `llama-cpp-python`)
 * **Orchestration:** LangChain
 * **Vector Store:** FAISS (CPU)
 * **Embedding Model:** `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
-* **UI:** Gradio
+* **UI:** Streamlit
 
 ### 2. Architecture Diagram
 ![Architecture Diagram](./diagram/architecture_diagram.svg)
@@ -34,24 +34,27 @@
 
 ### 4. Design Constraints (The Math)
 
-*Based on preliminary experiments (1 Feb 2026):*
+*Based on experiments (Feb 2026):*
 
 * **Token Ratio:** 0.55 tokens/char (Nepali) vs 0.24 tokens/char (English).
-* **Max Context Window:** 8192 tokens (Llama 3 default).
-* **Chunk Size:** 1000 characters ( 550 tokens).
+* **Max Context Window:** 2048 tokens (TinyLlama).
+* **Chunk Size:** 1000 characters (~550 tokens Nepali).
 * **Chunk Overlap:** 200 characters.
-* **Retrieval Count (k):** 5 documents.
-* **Total Input Context:**  tokens.
-* **Safety Margin:** Leaves  5000 tokens for system prompt + user query + generated answer. **Safe from OOM.**
+* **Retrieval Count (k):** 3 documents.
+* **Max Generation Tokens:** 256.
+* **Prompt Token Budget:** ~1792 tokens (2048 − 256).
+* **Char Budget (Nepali):** 1400 chars (~770 tokens context) — fits within budget.
+* **Char Budget (English):** 3200 chars (~768 tokens context) — fits within budget.
+* **Note:** Language-aware truncation ensures Nepali prompts (with their higher token density) never exceed the context window.
 
 ### 5. Prompt Engineering
 
-We use the strict Llama-3 instruct format to prevent mode collapse.
+We use the ChatML instruct format expected by TinyLlama-Chat.
 
 **Template:**
 
 ```text
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+<|im_start|>system
 You are a helpful AI assistant for Nepali News.
 Use the following pieces of retrieved context to answer the user's question.
 If the answer is not in the context, strictly say "I cannot find the answer in the provided news."
@@ -60,27 +63,28 @@ Keep the answer concise and factual.
 Context:
 {context}
 
-Answer in the following language: {target_language}
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-{question}
-<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
+Answer in the following language: {target_language}<|im_end|>
+<|im_start|>user
+{question}<|im_end|>
+<|im_start|>assistant
 ```
 
 ### 6. User Interface (Streamlit)
 
 **Inputs:**
 
-1. `Query` (Textbox)
-2. `Response Language` (Radio: "Nepali", "English") - *Controls the `{target_language}` variable in prompt.*
+1. `Query` — Chat input box.
+2. `Response Language` — Sidebar radio: "Auto-detect", "Nepali", "English". Controls the `{target_language}` variable in prompt.
 
 **Outputs:**
 
-1. `Answer` (Markdown Text)
-2. `Sources` (JSON/Text: List of headlines + similarity scores).
+1. `Answer` — Rendered as Markdown in a chat bubble.
+2. `Sources` — Expandable list of outlet names + article headlines.
 
-### 7. Future Scalability / Limitations
+### 7. Limitations & Future Scalability
 
+* **Nepali Generation Quality:** TinyLlama-1.1B was primarily trained on English; its Nepali output is noticeably weaker. Upgrading to a larger multilingual model (e.g., Phi-3.5-mini, Llama-3.1-8B) on a machine with a GPU or more RAM would significantly improve Nepali answers.
+* **Context Window:** TinyLlama's 2048-token limit restricts retrieval to k=3 chunks. A model with a larger context (e.g., 8k–128k) would allow more evidence per query.
 * **Storage:** Current in-memory FAISS works for <100k docs. For >1M, migrate to Pinecone or Weaviate.
-* **Latency:** CPU indexing is slow; move to GPU index if ingestion takes >10 mins.
-* **Multi-turn:** Currently stateless (Single QA). Phase 2.5 can add conversation memory.
+* **Latency:** CPU-only inference is slow (~15–30 s per answer). A GPU would reduce this to <3 s.
+* **Multi-turn:** Currently stateless (single QA). Conversation memory can be added in a future phase.
