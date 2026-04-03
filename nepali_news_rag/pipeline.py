@@ -56,7 +56,18 @@ class NepaliNewsPipeline:
 
         if decision.route == "DIRECT":
             prompt = build_direct_prompt(query, target_language)
-            answer = self._clean_response(self.llm.generate(prompt))
+            try:
+                answer = self._clean_response(self.llm.generate(prompt))
+            except Exception as exc:
+                return asdict(
+                    PipelineResponse(
+                        answer=self._provider_error_message(exc, target_language),
+                        success=False,
+                        route="DIRECT",
+                        guardrail_type="provider_error",
+                        sources=[],
+                    )
+                )
             return asdict(
                 PipelineResponse(
                     answer=answer,
@@ -83,7 +94,18 @@ class NepaliNewsPipeline:
         prompt = build_rag_prompt(
             context=context, question=query, target_language=target_language
         )
-        answer = self._clean_response(self.llm.generate(prompt))
+        try:
+            answer = self._clean_response(self.llm.generate(prompt))
+        except Exception as exc:
+            return asdict(
+                PipelineResponse(
+                    answer=self._provider_error_message(exc, target_language),
+                    success=False,
+                    route="RAG",
+                    guardrail_type="provider_error",
+                    sources=[],
+                )
+            )
 
         if "cannot find" in answer.lower() or "don't have" in answer.lower():
             answer = "I cannot find the answer in the provided news."
@@ -128,3 +150,22 @@ class NepaliNewsPipeline:
         if "<|im_start|>assistant" in response:
             response = response.split("<|im_start|>assistant")[-1]
         return response.replace("<|im_end|>", "").strip()
+
+    @staticmethod
+    def _provider_error_message(error: Exception, language: str) -> str:
+        message = str(error).lower()
+
+        if "system memory" in message or "out of memory" in message:
+            if language == "Nepali":
+                return (
+                    "हालको मेशिनमा Llama 3.1 8B चलाउन पर्याप्त मेमोरी छैन। "
+                    "कृपया रिमोट प्रदायक (Groq/Hugging Face) प्रयोग गर्नुहोस् वा RAM बढाउनुहोस्।"
+                )
+            return (
+                "This machine does not have enough memory to run Llama 3.1 8B locally. "
+                "Use a remote provider (Groq/Hugging Face) or run on a higher-RAM system."
+            )
+
+        if language == "Nepali":
+            return "LLM प्रदायकबाट उत्तर प्राप्त गर्न सकिएन। कृपया प्रदायक सेटिङ र API key जाँच गर्नुहोस्।"
+        return "Could not get a response from the configured LLM provider. Check provider settings and credentials."
