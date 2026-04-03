@@ -30,6 +30,8 @@ news-refresh-news = "scripts.refresh_news:main"
 news-refresh-prices = "scripts.refresh_prices:main"
 news-evaluate = "scripts.evaluate_benchmark:main"
 news-app = "scripts.run_app:main"
+news-smoke = "scripts.smoke_check:main"
+news-doctor = "scripts.doctor:main"
 
 [build-system]
 requires = ["hatchling>=1.27.0"]
