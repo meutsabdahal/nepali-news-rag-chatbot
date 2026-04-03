@@ -80,7 +80,9 @@ class NepaliNewsPipeline:
             )
 
         context, used_docs = self._build_context(query, target_language, docs)
-        prompt = build_rag_prompt(context=context, question=query, target_language=target_language)
+        prompt = build_rag_prompt(
+            context=context, question=query, target_language=target_language
+        )
         answer = self._clean_response(self.llm.generate(prompt))
 
         if "cannot find" in answer.lower() or "don't have" in answer.lower():

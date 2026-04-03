@@ -19,7 +19,9 @@ pipeline = get_pipeline()
 
 with st.sidebar:
     st.subheader("Settings")
-    response_language = st.radio("Response Language", ["Auto-detect", "Nepali", "English"], index=0)
+    response_language = st.radio(
+        "Response Language", ["Auto-detect", "Nepali", "English"], index=0
+    )
     st.subheader("Try these")
     for q in EXAMPLE_QUESTIONS:
         st.caption(f"- {q}")

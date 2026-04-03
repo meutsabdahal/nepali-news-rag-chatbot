@@ -19,6 +19,12 @@ class Settings:
     trusted_local_index: bool
     llama_gguf_repo: str
     llama_gguf_file: str
+    ollama_host: str
+    ollama_model: str
+    groq_api_key: str | None
+    groq_model: str
+    hf_api_key: str | None
+    hf_model: str
 
 
 def _env_int(name: str, default: int) -> int:
@@ -58,4 +64,10 @@ def get_settings() -> Settings:
         llama_gguf_file=os.getenv(
             "LLAMA_GGUF_FILE", "tinyllama-1.1b-chat-v1.0.Q8_0.gguf"
         ),
+        ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+        ollama_model=os.getenv("OLLAMA_MODEL", "tinyllama:latest"),
+        groq_api_key=os.getenv("GROQ_API_KEY"),
+        groq_model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
+        hf_api_key=os.getenv("HF_API_KEY"),
+        hf_model=os.getenv("HF_LLM_MODEL", "HuggingFaceH4/zephyr-7b-beta"),
     )

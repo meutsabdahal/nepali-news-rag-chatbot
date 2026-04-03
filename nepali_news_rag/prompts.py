@@ -35,4 +35,6 @@ def build_rag_prompt(context: str, question: str, target_language: str) -> str:
 
 
 def build_direct_prompt(question: str, target_language: str) -> str:
-    return DIRECT_PROMPT_TEMPLATE.format(question=question, target_language=target_language)
+    return DIRECT_PROMPT_TEMPLATE.format(
+        question=question, target_language=target_language
+    )
