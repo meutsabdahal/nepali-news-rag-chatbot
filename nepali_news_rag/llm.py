@@ -3,9 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from groq import Groq
-from huggingface_hub import hf_hub_download
 from huggingface_hub import InferenceClient
-from langchain_community.llms import LlamaCpp
 from ollama import Client as OllamaClientSDK
 
 from .config import Settings
@@ -15,34 +13,6 @@ class BaseLLMClient(ABC):
     @abstractmethod
     def generate(self, prompt: str) -> str:
         raise NotImplementedError
-
-
-class LlamaCppClient(BaseLLMClient):
-    def __init__(self, settings: Settings) -> None:
-        settings.model_cache_dir.mkdir(parents=True, exist_ok=True)
-        model_path = settings.model_cache_dir / settings.llama_gguf_file
-
-        if not model_path.exists():
-            hf_hub_download(
-                repo_id=settings.llama_gguf_repo,
-                filename=settings.llama_gguf_file,
-                local_dir=str(settings.model_cache_dir),
-            )
-
-        self._llm = LlamaCpp(
-            model_path=str(model_path),
-            n_ctx=2048,
-            n_batch=512,
-            n_gpu_layers=0,
-            temperature=0.1,
-            top_p=0.9,
-            repeat_penalty=1.1,
-            max_tokens=settings.response_max_tokens,
-            verbose=False,
-        )
-
-    def generate(self, prompt: str) -> str:
-        return self._llm.invoke(prompt)
 
 
 class OllamaClient(BaseLLMClient):
@@ -101,8 +71,6 @@ class HuggingFaceClientLLM(BaseLLMClient):
 
 def get_llm_client(settings: Settings) -> BaseLLMClient:
     provider = settings.llm_provider
-    if provider == "llama_cpp":
-        return LlamaCppClient(settings)
     if provider == "ollama":
         return OllamaClient(settings)
     if provider == "groq":

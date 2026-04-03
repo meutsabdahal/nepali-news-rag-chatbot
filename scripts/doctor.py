@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from nepali_news_rag.config import get_settings
 
 
@@ -16,7 +14,6 @@ def main() -> None:
         "raw_csv": settings.raw_csv_path.exists(),
         "chunks_pkl": settings.chunks_pkl_path.exists(),
         "vector_store_dir": settings.vector_store_dir.exists(),
-        "model_cache_dir": settings.model_cache_dir.exists(),
     }
 
     print("Project doctor report")
@@ -26,9 +23,6 @@ def main() -> None:
     print(f"chunks: {_state(checks['chunks_pkl'])} ({settings.chunks_pkl_path})")
     print(
         f"vector_store: {_state(checks['vector_store_dir'])} ({settings.vector_store_dir})"
-    )
-    print(
-        f"model_cache: {_state(checks['model_cache_dir'])} ({settings.model_cache_dir})"
     )
 
     if settings.llm_provider == "groq" and not settings.groq_api_key:
