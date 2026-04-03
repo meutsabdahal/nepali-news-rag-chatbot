@@ -1,0 +1,17 @@
+[
+  {
+    "id": "news-001",
+    "question": "What are the recent developments in education in Nepal?",
+    "expected_route": "RAG"
+  },
+  {
+    "id": "news-002",
+    "question": "नेपालको पर्यटनबारे हालका समाचार के छन्?",
+    "expected_route": "RAG"
+  },
+  {
+    "id": "news-003",
+    "question": "Can you predict what will happen in Nepal politics next year?",
+    "expected_route": "OOS"
+  }
+]
