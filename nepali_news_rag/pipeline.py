@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import re
+
+import pandas as pd
 
 from .config import get_settings
 from .language_detector import detect_language
@@ -107,7 +110,20 @@ class NepaliNewsPipeline:
                 )
             )
 
-        if "cannot find" in answer.lower() or "don't have" in answer.lower():
+        if self._looks_unresolved(answer):
+            fallback = self._keyword_fallback_answer(query, target_language)
+            if fallback is not None:
+                answer, sources = fallback
+                return asdict(
+                    PipelineResponse(
+                        answer=answer,
+                        success=True,
+                        route="RAG",
+                        guardrail_type=None,
+                        sources=sources,
+                    )
+                )
+
             answer = "I cannot find the answer in the provided news."
 
         sources = [
@@ -142,8 +158,130 @@ class NepaliNewsPipeline:
             context_parts.append(snippet)
             char_count += len(snippet) + 2
 
+        if not context_parts and docs:
+            fallback_chars = max(300, budget // 2)
+            context_parts.append(docs[0].page_content[:fallback_chars])
+
         used_docs = docs[: len(context_parts)]
         return "\n\n".join(context_parts), used_docs
+
+    def _keyword_fallback_answer(
+        self, query: str, language: str
+    ) -> tuple[str, list[str]] | None:
+        try:
+            raw_path = self.settings.raw_csv_path
+        except Exception:
+            return None
+
+        if not raw_path.exists():
+            return None
+
+        try:
+            df = pd.read_csv(raw_path, usecols=["source", "heading", "content", "category"])
+        except Exception:
+            return None
+
+        merged = (
+            df["heading"].fillna("").astype(str)
+            + " "
+            + df["content"].fillna("").astype(str)
+        ).str.lower()
+
+        tokens = [
+            t
+            for t in re.findall(r"[\w\u0900-\u097F]+", query.lower())
+            if len(t) >= 3 or ("\u0900" <= t[0] <= "\u097F")
+        ]
+        stop_tokens = {
+            "what",
+            "has",
+            "been",
+            "reported",
+            "recently",
+            "about",
+            "who",
+            "the",
+            "is",
+            "of",
+            "in",
+            "के",
+            "छ",
+            "को",
+            "बारे",
+            "भन्छ",
+        }
+        tokens = [t for t in tokens if t not in stop_tokens]
+
+        expansions = {
+            "pokhara": ["पोखरा"],
+            "kathmandu": ["काठमाडौं", "काठमाडौँ"],
+            "tourism": ["पर्यटन"],
+            "pollution": ["प्रदूषण"],
+            "education": ["शिक्षा"],
+            "nepal": ["नेपाल"],
+            "prime": ["प्रधानमन्त्री"],
+            "minister": ["प्रधानमन्त्री"],
+        }
+        expanded: list[str] = []
+        for t in tokens:
+            expanded.append(t)
+            expanded.extend(expansions.get(t, []))
+        tokens = list(dict.fromkeys(expanded))
+
+        if not tokens:
+            return None
+
+        score = pd.Series(0, index=df.index, dtype="int64")
+        for token in tokens:
+            score += merged.str.contains(re.escape(token), regex=True).astype("int64")
+
+        candidates = df[score > 0].copy()
+        if candidates.empty:
+            return None
+
+        candidates["score"] = score[score > 0]
+        candidates = candidates.sort_values("score", ascending=False).head(3)
+
+        context_parts = []
+        sources: list[str] = []
+        for row in candidates.itertuples(index=False):
+            text = f"Category: {getattr(row, 'category', 'General')} | Title: {getattr(row, 'heading', '')}\n{getattr(row, 'content', '')}"
+            context_parts.append(text[:1200])
+            sources.append(
+                f"{getattr(row, 'source', 'Unknown')} - {getattr(row, 'heading', 'N/A')}"
+            )
+
+        prompt = build_rag_prompt(
+            context="\n\n".join(context_parts),
+            question=query,
+            target_language=language,
+        )
+
+        try:
+            answer = self._clean_response(self.llm.generate(prompt))
+        except Exception:
+            return None
+
+        if not answer.strip():
+            return None
+        return answer, sources
+
+    @staticmethod
+    def _looks_unresolved(answer: str) -> bool:
+        normalized = answer.strip().lower()
+        unresolved_signals = [
+            "i cannot find the answer in the provided news",
+            "i don't have information",
+            "i do not have information",
+            "does not mention",
+            "not available in the context",
+            "कुनै जानकारी",
+            "जानकारी छैन",
+            "प्रदान गरिएको छैन",
+            "प्रस्तुत गरिएको छैन",
+            "उल्लेख गरिएको छैन",
+        ]
+        return any(sig in normalized for sig in unresolved_signals)
 
     @staticmethod
     def _clean_response(response: str) -> str:

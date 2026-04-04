@@ -4,6 +4,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -41,6 +43,9 @@ def _env_bool(name: str, default: bool) -> bool:
 def get_settings() -> Settings:
     project_root = Path(__file__).resolve().parent.parent
 
+    # Load project-level .env so local runs pick up provider/model settings.
+    load_dotenv(project_root / ".env", override=False)
+
     return Settings(
         project_root=project_root,
         raw_csv_path=project_root / "data" / "raw" / "np20ng.csv",
@@ -54,7 +59,11 @@ def get_settings() -> Settings:
         response_max_tokens=_env_int("MAX_TOKENS", 256),
         retriever_k=_env_int("TOP_K_RAG", 3),
         trusted_local_index=_env_bool("TRUST_LOCAL_INDEX", True),
-        ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+        ollama_host=(
+            os.getenv("OLLAMA_HOST")
+            or os.getenv("OLLAMA_BASE_URL")
+            or "http://localhost:11434"
+        ),
         ollama_model=os.getenv("OLLAMA_MODEL", "llama3.1:8b-instruct-q4_K_M"),
         groq_api_key=os.getenv("GROQ_API_KEY"),
         groq_model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),

@@ -52,6 +52,22 @@ class HuggingFaceClientLLM(BaseLLMClient):
         self._max_tokens = settings.response_max_tokens
 
     def generate(self, prompt: str) -> str:
+        # Prefer chat completion for instruct/chat-tuned models.
+        try:
+            chat_output = self._client.chat_completion(
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=self._max_tokens,
+                temperature=0.1,
+            )
+            choices = getattr(chat_output, "choices", None) or []
+            if choices:
+                message = getattr(choices[0], "message", None)
+                content = getattr(message, "content", None)
+                if isinstance(content, str):
+                    return content.strip()
+        except Exception:
+            pass
+
         try:
             output = self._client.text_generation(
                 prompt=prompt,
