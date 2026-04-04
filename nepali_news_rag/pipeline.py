@@ -177,7 +177,9 @@ class NepaliNewsPipeline:
             return None
 
         try:
-            df = pd.read_csv(raw_path, usecols=["source", "heading", "content", "category"])
+            df = pd.read_csv(
+                raw_path, usecols=["source", "heading", "content", "category"]
+            )
         except Exception:
             return None
 
@@ -190,7 +192,7 @@ class NepaliNewsPipeline:
         tokens = [
             t
             for t in re.findall(r"[\w\u0900-\u097F]+", query.lower())
-            if len(t) >= 3 or ("\u0900" <= t[0] <= "\u097F")
+            if len(t) >= 3 or ("\u0900" <= t[0] <= "\u097f")
         ]
         stop_tokens = {
             "what",
