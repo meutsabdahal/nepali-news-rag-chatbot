@@ -4,6 +4,19 @@ A cross-lingual Retrieval-Augmented Generation (RAG) chatbot for Nepali news.
 
 Ask questions in English or Nepali, retrieve grounded evidence from the `np20ng` corpus, and get answers with source references.
 
+## Benchmark Results (Latest)
+
+Latest benchmark run date: 2026-04-28 (UTC).
+
+- Total benchmark questions: 3
+- Route match accuracy: 3/3 (100.00%)
+- RAG route cases: 2/2 correctly routed
+- OOS guardrail cases: 1/1 correctly routed and blocked
+
+Latest report file:
+
+- `evaluation/results/report_readme_20260428.json`
+
 ## What It Does
 
 This project provides a practical RAG pipeline focused on Nepali-language news:

@@ -1,0 +1,44 @@
+{
+  "summary": {
+    "run_at_utc": "2026-04-28T05:26:25.680528+00:00",
+    "total": 3,
+    "route_match_count": 3,
+    "route_match_rate": 1.0
+  },
+  "results": [
+    {
+      "id": "news-001",
+      "question": "What are the recent developments in education in Nepal?",
+      "expected_route": "RAG",
+      "actual_route": "RAG",
+      "answer": "According to the provided context, there are two recent developments in education in Nepal:\n\n1. Kapilvastu has been committed to becoming a fully literate district again, with a target to announce it as a fully literate district by the next Fagun. This is the second time the district has made this commitment, after a similar commitment was made four years ago.\n\n2. The Pragya Foundation has published a new book titled \"Pragya Nepali Academic Grammar\" which is intended for students and teachers from school to university level. This is the 10th book published by the foundation, which has been publishing Nepali language and grammar books since 2033.",
+      "sources": [
+        "Nagarik - कपिलवस्तुलाई साक्षर जिल्ला बनाउने फेरि अर्को प्रतिबद्धता",
+        "Nagarik - प्रज्ञाले निकाल्यो नेपाली शैक्षणिक व्याकरण",
+        "Nagarik - बेनी सामुदायिकबाट सिक्दै अन्यत्रका स्कुल"
+      ],
+      "error": null
+    },
+    {
+      "id": "news-002",
+      "question": "नेपालको पर्यटनबारे हालका समाचार के छन्?",
+      "expected_route": "RAG",
+      "actual_route": "RAG",
+      "answer": "हाल नेपालको पर्यटन समाचारमा सिक्किममा 'इनर लाइन पर्मिट' बन्द गरिएको भन्दै पर्यटन व्यवसायमा व्यापक असर देखिएको छ । सिलगढीका टुर अपरेटर सम्राट सन्यालले सिक्किममा महिनामा ४ सयभन्दा धैरै पर्यटक आउने गरेकोमा यो संख्यामा कटौती हुने भन्दै चिन्ता व्यक्त गरेका छन् ।",
+      "sources": [
+        "Ekantipur - कोरोना संक्रमण रोक्न सिक्किममा विदेशीलाई प्रतिबन्ध",
+        "Ekantipur - युरोपेली पर्यटकका लागि खुल्यो इटाली"
+      ],
+      "error": null
+    },
+    {
+      "id": "news-003",
+      "question": "Can you predict what will happen in Nepal politics next year?",
+      "expected_route": "OOS",
+      "actual_route": "OOS",
+      "answer": "I cannot provide speculative predictions. I can answer only from available news evidence.",
+      "sources": [],
+      "error": null
+    }
+  ]
+}
