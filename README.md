@@ -1,59 +1,189 @@
-# Product Requirements Document (Lite)
+# Nepali News RAG Chatbot
 
-**Project Name:** Nepali News RAG (Cross-Lingual Q&A Bot) <br>
-**Version:** 0.1.0 (MVP) <br>
-**Status:** In Development
+A cross-lingual Retrieval-Augmented Generation (RAG) chatbot for Nepali news.
 
-## 1. Executive Summary
+Ask questions in English or Nepali, retrieve grounded evidence from the `np20ng` corpus, and get answers with source references.
 
-This project aims to build a **Retrieval-Augmented Generation (RAG)** system that allows users to query a massive static dataset of Nepali news articles (`np20ng`) using natural language. The system features **cross-lingual capabilities**, enabling users to ask questions in **English or Nepali** and receive accurate, grounded answers in their preferred language, bridging the gap between global users and local information.
+## What It Does
 
-## 2. Problem Statement
+This project provides a practical RAG pipeline focused on Nepali-language news:
 
-* **The Search Gap:** Standard keyword search fails to capture context or synonyms in the Nepali language (e.g., searching "disaster" might miss "badhipairo").
-* **The Language Barrier:** Non-Nepali speakers (researchers, tourists, expats) cannot access valuable local knowledge locked inside Nepali-only documents.
-* **Hallucinations:** Generic LLMs (like ChatGPT) often hallucinate facts about niche local events when not grounded in specific data.
+- Cross-lingual query support (English/Nepali input).
+- Retrieval over a local FAISS vector store built from Nepali news chunks.
+- Safety guardrail for speculative prediction prompts.
+- Language-aware responses with source transparency.
+- Streamlit chat interface for quick experimentation.
 
-## 3. Target Audience
+## Current Status
 
-* **Primary:** Recruiters/Hiring Managers (Proof of RAG & NLP skills).
-* **Secondary:** Researchers, NGOs, or Tourists needing specific information from local Nepali archives without needing to read the script.
+Implemented:
 
-## 4. Key Features (MVP)
+- End-to-end `RAG`, `DIRECT`, and `OOS` route handling.
+- Dataset preparation and chunking pipeline from raw CSV.
+- FAISS index build and local retrieval flow.
+- Multiple LLM providers (`ollama`, `groq`, `huggingface`).
+- Benchmark runner and smoke-check script.
+- Contract and guardrail regression tests.
 
-| Feature | Description | Priority |
-| --- | --- | --- |
-| **Cross-Lingual Search** | Users can query in English; the system retrieves relevant *Nepali* documents using semantic mapping. | **P0 (Critical)** |
-| **Bilingual Response** | The bot automatically detects the query language (Eng/Nep) and responds in the same language. | **P0 (Critical)** |
-| **Source Citation** | Every answer must cite the specific document/headline used (e.g., *"Source: Kantipur, 2018"*). | **P1 (High)** |
-| **"I Don't Know" Guardrail** | If the answer isn't in the dataset, the bot must refuse to answer rather than making things up. | **P1 (High)** |
+Not in scope in this repository:
 
-## 5. Technical Architecture
+- Real-time web/news crawling.
+- Price/fundamental SQL analytics (this repo is news-RAG-only).
 
-* **Knowledge Base:** `np20ng` Dataset (10k+ Nepali news articles).
-* **Embedding Model:** `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (supports Nepali & English).
-* **Vector Database:** **FAISS** (Local, fast, CPU-optimized).
-* **LLM (Reasoning):** **TinyLlama-1.1B-Chat-v1.0** (Q8_0 GGUF via `llama-cpp-python`).
-* **Orchestrator:** **LangChain**.
-* **Frontend:** **Streamlit**.
+## Architecture
 
-## 6. User Flow
+High-level flow:
 
-1. **User** opens the web interface.
-2. **User** types a question (e.g., *"What is the impact of tourism in Pokhara?"*).
-3. **System** detects language (English) and embeds the query.
-4. **Retriever** searches the Nepali vector index for semantically similar news.
-5. **LLM** reads the retrieved Nepali text and synthesizes an answer *in English*.
-6. **UI** displays the Answer + Source Documents.
+`Streamlit UI (app/main.py) -> NepaliNewsPipeline -> Router/Guardrails -> Retriever (FAISS) -> LLM -> Answer + Sources`
 
-## 7. Success Metrics
+Core behavior:
 
-* **Retrieval Accuracy:** The top 3 retrieved documents must contain the answer 80% of the time (verified manually).
-* **Latency:** Full response (Retrieval + Generation) should take **< 3 seconds**.
-* **Language Consistency:** The bot must never switch languages mid-sentence (e.g., answering an English question in Nepali).
+- `DIRECT`: greetings/general factual queries that do not need corpus retrieval.
+- `RAG`: news-grounded queries answered from retrieved context.
+- `OOS`: prediction-style requests blocked with a safe refusal.
 
-## 8. Out of Scope (For Now)
+## Repository Layout
 
-* Real-time internet browsing (Live news).
-* Voice input/output.
-* User account/history storage.
+- `app/main.py`: Streamlit app entrypoint.
+- `app/components.py`: response/source rendering helpers.
+- `nepali_news_rag/pipeline.py`: core orchestration for routing, retrieval, and generation.
+- `nepali_news_rag/router.py`: route decision logic (`DIRECT`, `RAG`, `OOS`).
+- `nepali_news_rag/guardrails.py`: prediction-guardrail policy.
+- `nepali_news_rag/data_prep.py`: cleaning, validation, chunking, and chunk artifact IO.
+- `nepali_news_rag/index_builder.py`: FAISS index training/building.
+- `nepali_news_rag/retriever.py`: FAISS load and retrieval wrapper.
+- `nepali_news_rag/llm.py`: provider adapters.
+- `scripts/build_db.py`: build chunk artifact from raw CSV.
+- `scripts/refresh_news.py`: build/refresh vector index from chunks.
+- `scripts/evaluate_benchmark.py`: benchmark questions runner.
+- `scripts/smoke_check.py`: compile + tests (+ optional benchmark) sanity checks.
+- `tests/`: unit and contract tests.
+
+## Quick Start (uv-native)
+
+Prerequisites:
+
+- Python 3.14+
+- `uv` installed
+- Raw dataset file available at `data/raw/np20ng.csv`
+
+1. Sync dependencies
+
+```bash
+uv sync
+```
+
+2. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Then set values in `.env` as needed:
+
+- `LLM_PROVIDER=ollama|groq|hf`
+- `OLLAMA_HOST`, `OLLAMA_MODEL` (for local Ollama)
+- `GROQ_API_KEY`, `GROQ_MODEL` (for Groq)
+- `HF_API_KEY`, `HF_LLM_MODEL` (for Hugging Face)
+
+3. Build local artifacts
+
+```bash
+uv run news-build-db
+uv run news-refresh-news
+```
+
+These commands create:
+
+- `data/processed/nepali_news_chunks.pkl`
+- `data/vector_store/faiss_index/`
+
+4. Run the app
+
+```bash
+uv run news-app
+```
+
+Streamlit should open locally and serve the chat UI.
+
+## Useful Commands
+
+Project health and diagnostics:
+
+```bash
+uv run news-doctor
+```
+
+Run smoke checks (compile + tests):
+
+```bash
+uv run news-smoke
+```
+
+Include a small benchmark in smoke checks:
+
+```bash
+uv run news-smoke --with-benchmark --benchmark-limit 2
+```
+
+Run benchmark directly:
+
+```bash
+uv run news-evaluate --limit 20 --output latest_results.json
+```
+
+Results are written to `evaluation/results/`.
+
+## Evaluation
+
+Benchmark questions live in `evaluation/benchmark_questions.json`.
+
+The evaluation script reports:
+
+- Route match count/rate against expected route labels.
+- Per-question outputs, sources, and error capture.
+- Timestamped run summary metadata.
+
+Example:
+
+```bash
+uv run python scripts/evaluate_benchmark.py --limit 10 --output report_local.json
+```
+
+## Tests
+
+Run the test suite:
+
+```bash
+uv run python -m unittest discover -s tests -p "test_*.py"
+```
+
+Current coverage focus:
+
+- Guardrail detection behavior.
+- Provider factory behavior.
+- Pipeline response contract shape and routing behavior.
+
+## Troubleshooting
+
+- `Vector store not found ...`:
+  Build artifacts first with `uv run news-build-db` then `uv run news-refresh-news`.
+
+- `GROQ_API_KEY is required ...`:
+  Set `GROQ_API_KEY` when using `LLM_PROVIDER=groq`.
+
+- Ollama memory/provider failures:
+  Switch to Groq/HF provider in `.env`, or use a smaller/local model that fits your machine.
+
+- No answer from retrieval:
+  Confirm raw data quality and rebuild chunks/index.
+
+## Data Notes
+
+- This project assumes a static local news corpus (`np20ng.csv`).
+- Source data ownership remains with original publishers/dataset maintainers.
+- Use this repository for educational/research purposes.
+
+## License
+
+MIT License. See `LICENSE`.
